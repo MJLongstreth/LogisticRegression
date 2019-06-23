@@ -42,7 +42,6 @@ Use the [National Health and Nutrition Examination Survey](https://en.wikipedia.
 nhanes <- read_csv('nhanes.csv')
 ```
 
-(add additional code chunks here)  
 # Examine raw data from data set. 
 ```{r}
 head(nhanes, n = 10)
@@ -51,7 +50,7 @@ dim(nhanes)
 glimpse(nhanes)
 ```
 
-## 2.2 Convert character strings to factors.
+# Convert character strings to factors.
 ```{r}
 nhanes_factors <- c(2, 4, 5, 34, 35, 36)
 nhanes[,nhanes_factors] <- map(nhanes[,nhanes_factors],

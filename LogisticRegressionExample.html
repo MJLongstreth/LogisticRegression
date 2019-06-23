@@ -1570,8 +1570,9 @@ div.tocify {
 </ul>
 <pre class="r"><code>#  Do not change the code in this chunk!
 nhanes &lt;- read_csv(&#39;nhanes.csv&#39;)</code></pre>
-<p>(add additional code chunks here)<br />
-# Examine raw data from data set.</p>
+</div>
+<div id="examine-raw-data-from-data-set." class="section level1">
+<h1><span class="header-section-number">2</span> Examine raw data from data set.</h1>
 <pre class="r"><code>head(nhanes, n = 10)</code></pre>
 <pre><code># A tibble: 10 x 36
    INDFMPIR RIAGENDR RIDAGEYR RIDRETH1 DR1_300 DR1_320Z DR1TALCO DR1TCAFF
@@ -1657,15 +1658,15 @@ $ LBXSOSSI &lt;dbl&gt; 271, 287, 271, 283, 275, 276, 276, 280, 274, 277, 277...
 $ DIQ010   &lt;chr&gt; &quot;No&quot;, &quot;Yes&quot;, &quot;No&quot;, &quot;No&quot;, &quot;No&quot;, &quot;No&quot;, &quot;No&quot;, &quot;Yes&quot;, &quot;No...
 $ SLQ050   &lt;chr&gt; &quot;No&quot;, &quot;No&quot;, &quot;No&quot;, &quot;No&quot;, &quot;No&quot;, &quot;No&quot;, &quot;No&quot;, &quot;Yes&quot;, &quot;No&quot;...
 $ WHQ030   &lt;chr&gt; &quot;Overweight,&quot;, &quot;Overweight,&quot;, &quot;Underweight, or&quot;, &quot;Abo...</code></pre>
-<div id="convert-character-strings-to-factors." class="section level2">
-<h2><span class="header-section-number">1.1</span> 2.2 Convert character strings to factors.</h2>
+</div>
+<div id="convert-character-strings-to-factors." class="section level1">
+<h1><span class="header-section-number">3</span> Convert character strings to factors.</h1>
 <pre class="r"><code>nhanes_factors &lt;- c(2, 4, 5, 34, 35, 36)
 nhanes[,nhanes_factors] &lt;- map(nhanes[,nhanes_factors],
                                as.factor)</code></pre>
 </div>
-</div>
 <div id="view-balance-of-categorical-variables-in-dataset." class="section level1">
-<h1><span class="header-section-number">2</span> View balance of categorical variables in dataset.</h1>
+<h1><span class="header-section-number">4</span> View balance of categorical variables in dataset.</h1>
 <pre class="r"><code>CrossTable(nhanes$RIAGENDR) </code></pre>
 <pre><code>
  
@@ -1785,7 +1786,7 @@ Total Observations in Table:  26193
  </code></pre>
 </div>
 <div id="check-for-and-remove-missing-value." class="section level1">
-<h1><span class="header-section-number">3</span> Check for and remove missing value.</h1>
+<h1><span class="header-section-number">5</span> Check for and remove missing value.</h1>
 <p>There is one row with missing data in the dataset. Considering the size of the dataset, it should be safe to remove row with missing data.</p>
 <pre class="r"><code>sapply(nhanes, function(x) sum(is.na(x))) </code></pre>
 <pre><code>INDFMPIR RIAGENDR RIDAGEYR RIDRETH1  DR1_300 DR1_320Z DR1TALCO DR1TCAFF 
@@ -1802,7 +1803,7 @@ LBXSOSSI   DIQ010   SLQ050   WHQ030
 nhanes &lt;- nhanes %&gt;% drop_na()</code></pre>
 </div>
 <div id="create-traintest-sets-and-formula-for-models." class="section level1">
-<h1><span class="header-section-number">4</span> Create train/test sets and Formula for models.</h1>
+<h1><span class="header-section-number">6</span> Create train/test sets and Formula for models.</h1>
 <pre class="r"><code>library(caret)
 library(broom)
 set.seed(123)
@@ -1815,7 +1816,7 @@ nhanes_test &lt;- nhanes[assignment1 == 2,]
 nhanes_fm &lt;- formula(DIQ010 ~ .)</code></pre>
 </div>
 <div id="create-first-tree-model-rpart" class="section level1">
-<h1><span class="header-section-number">5</span> Create first tree-model (“RPart”)</h1>
+<h1><span class="header-section-number">7</span> Create first tree-model (“RPart”)</h1>
 <p>We will use AUC as to evaluate model performance.</p>
 <pre class="r"><code>rpart_hanes_model &lt;- rpart(formula = nhanes_fm,
                            data = nhanes_train,
@@ -1880,7 +1881,7 @@ class_model_performance</code></pre>
 [1] 0.8257948</code></pre>
 </div>
 <div id="bootstrap-model." class="section level1">
-<h1><span class="header-section-number">6</span> Bootstrap model.</h1>
+<h1><span class="header-section-number">8</span> Bootstrap model.</h1>
 <pre class="r"><code>bag_hanes_model &lt;- bagging(formula = nhanes_fm,
                            data = nhanes_train,
                            type = &quot;class&quot;,
@@ -1933,7 +1934,7 @@ $boot_auc
 [1] 0.9156974</code></pre>
 </div>
 <div id="random-forest-model." class="section level1">
-<h1><span class="header-section-number">7</span> Random Forest model.</h1>
+<h1><span class="header-section-number">9</span> Random Forest model.</h1>
 <pre class="r"><code>library(randomForest)
 rf_hanes_model &lt;- randomForest(formula = nhanes_fm,
                                data = nhanes_train)
@@ -2005,7 +2006,7 @@ $rf_auc
 [1] 0.9309872</code></pre>
 </div>
 <div id="tune-random-forest-model." class="section level1">
-<h1><span class="header-section-number">8</span> Tune Random Forest model.</h1>
+<h1><span class="header-section-number">10</span> Tune Random Forest model.</h1>
 <p>The results of this are an AUC == 1. This leads me to believe that the tuning parameters in the following are not bing applied correctly. I tried various methods to revise this section, but ran out of time.</p>
 <pre class="r"><code>res &lt;- tuneRF(x = subset(nhanes_test, select = -DIQ010),
               y = nhanes_test$DIQ010,
@@ -2056,7 +2057,7 @@ $rfTune_auc
 [1] 1</code></pre>
 </div>
 <div id="gbm-model." class="section level1">
-<h1><span class="header-section-number">9</span> GBM model.</h1>
+<h1><span class="header-section-number">11</span> GBM model.</h1>
 <p>For using the AUC to evaluate model performance, I receive the ranges; -Inf to Inf and 0 to 0. In calucualting AUC, this returns NaN. I tried problem solving here, but ran out of time. Would appreciate feedback here.</p>
 <pre class="r"><code>nhanes_train$DIQ010 &lt;- ifelse(nhanes_train$DIQ010 == &quot;yes&quot;, 1, 0)
 set.seed(43)
@@ -2088,7 +2089,7 @@ range(gbm_pred1)</code></pre>
 <pre><code>[1] NaN</code></pre>
 </div>
 <div id="conclusion" class="section level1">
-<h1><span class="header-section-number">10</span> Conclusion</h1>
+<h1><span class="header-section-number">12</span> Conclusion</h1>
 <p>From using AUC to evaluate the tree-model performance, the Random Forest model provides the highest AUC and shoul be selected to accurately predict the diagnoses of diabetes on the observation. However, since this is a prediction being used to aid in diagnosis, from evluating the confusion matrixes between the Random Forest and Bootsrapped model, the reduction in False Positives in the Bootstrapped model should be taken into consideration, to reduce the chance of mis diagnosis, even though the AUC is less than the Random Forest model.</p>
 </div>
 
