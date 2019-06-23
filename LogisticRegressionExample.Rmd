@@ -1,0 +1,215 @@
+---  
+title: "LogisticRegressionExample"
+author: "Longstreth, Michael"
+date: "June 23, 2019"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+    toc_float: true
+---
+
+```{r startup, warning=FALSE, message=FALSE, comment=NA, echo=FALSE}
+library(tidyverse)
+library(purrr)
+library(gmodels)
+library(ggplot2)
+library(rpart)
+library(rpart.plot)
+library(Metrics)
+library(ipred)
+library(gbm)
+library(dplyr)
+library(caret)
+library(broom)
+library(randomForest)
+knitr::opts_chunk$set(comment=NA)
+```
+
+# Objective
+Use the [National Health and Nutrition Examination Survey](https://en.wikipedia.org/wiki/National_Health_and_Nutrition_Examination_Survey) dataset **nhanes** (see below) for this problem.  
+
+*  Use the nhanes data to predict the outcome **DIQ010** indicating diabetes diagnosis (yes/no) from the above dataset.  
+*  Prepare your dataset (e.g., to avoid overfitting)  
+*  Fit you logistic regression, random forest, and gbm models to predict DIQ010  
+*  Tune your models to optimize performance    
+*  Show and *explain* your results, use plots where appropriate  
+*  Evaluate comparative model performance  
+*  State your conclusions  
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE}
+#  Do not change the code in this chunk!
+nhanes <- read_csv('nhanes.csv')
+```
+
+(add additional code chunks here)  
+# Examine raw data from data set. 
+```{r}
+head(nhanes, n = 10)
+tail(nhanes, n = 10)
+dim(nhanes)
+glimpse(nhanes)
+```
+
+## 2.2 Convert character strings to factors.
+```{r}
+nhanes_factors <- c(2, 4, 5, 34, 35, 36)
+nhanes[,nhanes_factors] <- map(nhanes[,nhanes_factors],
+                               as.factor)
+```
+
+# View balance of categorical variables in dataset.
+```{r}
+CrossTable(nhanes$RIAGENDR) 
+summary(nhanes$RIDRETH1) 
+CrossTable(nhanes$DR1_300) 
+CrossTable(nhanes$DIQ010) 
+CrossTable(nhanes$SLQ050) 
+CrossTable(nhanes$WHQ030)
+```
+
+# Check for and remove missing value.
+There is one row with missing data in the dataset.  Considering the size of the dataset, it should be safe to remove row with missing data.
+```{r}
+sapply(nhanes, function(x) sum(is.na(x))) 
+library(dplyr)
+nhanes <- nhanes %>% drop_na()
+```
+
+# Create train/test sets and Formula for models.
+```{r}
+library(caret)
+library(broom)
+set.seed(123)
+assignment1 <- sample(1:2,
+                      size = nrow(nhanes),
+                      prob = c(.8, .2),
+                      replace = TRUE)
+nhanes_train <- nhanes[assignment1 == 1,]
+nhanes_test <- nhanes[assignment1 == 2,]
+nhanes_fm <- formula(DIQ010 ~ .)
+```
+
+# Create first tree-model ("RPart")
+We will use AUC as to evaluate model performance.
+``` {r}
+rpart_hanes_model <- rpart(formula = nhanes_fm,
+                           data = nhanes_train,
+                           method = "class")
+rpart.plot(rpart_hanes_model)
+print(rpart_hanes_model)
+rpart_hanes_model_prediction_cl <- predict(object = rpart_hanes_model,  
+                                        newdata = nhanes_test,   
+                                        type = "class")
+rpart_hanes_model_prediction_prob <- predict(object = rpart_hanes_model,  
+                                        newdata = nhanes_test,   
+                                        type = "prob")
+confusionMatrix(data = rpart_hanes_model_prediction_cl,       
+                reference = nhanes_test$DIQ010)
+rpart_auc<- auc(actual = ifelse(nhanes_test$DIQ010 == "Yes", 1, 0),
+                predicted = rpart_hanes_model_prediction_prob[,"Yes"])
+class_model_performance <- list()
+class_model_performance[1] <- rpart_auc
+names(class_model_performance) <- c("rpart_auc")
+class_model_performance
+```
+
+# Bootstrap model.
+```{r}
+bag_hanes_model <- bagging(formula = nhanes_fm,
+                           data = nhanes_train,
+                           type = "class",
+                           cobb = TRUE)
+bag_hanes_model_prediction_cl <- predict(object = bag_hanes_model,
+                                         newdata = nhanes_test,
+                                         type = "class")
+bag_hanes_model_prediction_prob <- predict(object = bag_hanes_model,
+                                           newdata = nhanes_test,
+                                           type = "prob")
+confusionMatrix(data = bag_hanes_model_prediction_cl,       
+                reference = nhanes_test$DIQ010)
+boot_auc <- auc(actual = ifelse(nhanes_test$DIQ010 == "Yes", 1, 0),
+                predicted = bag_hanes_model_prediction_prob[,"Yes"])
+class_model_performance[2] <- boot_auc
+names(class_model_performance) <- c("rpart_auc",
+                                    "boot_auc")
+class_model_performance
+```
+
+# Random Forest model.
+```{r}
+library(randomForest)
+rf_hanes_model <- randomForest(formula = nhanes_fm,
+                               data = nhanes_train)
+rf_err <- rf_hanes_model$err.rate
+head(rf_err)
+rf_oob_err <- rf_err[500, "OOB"]
+plot(rf_hanes_model)
+legend(x = "right", 
+       legend = colnames(rf_err),
+       fill = 1:ncol(rf_err))
+rf_hanes_model_cl <- predict(object = rf_hanes_model,
+                             newdata = nhanes_test,
+                             type = "class")
+rf_hanes_model_prob <- predict(object = rf_hanes_model, 
+                               newdata = nhanes_test,
+                               type = "prob")
+rf_cm <- confusionMatrix(data = rf_hanes_model_cl,
+                         reference = nhanes_test$DIQ010)
+print(rf_cm)
+rf_auc <- auc(actual = ifelse(nhanes_test$DIQ010 == "Yes", 1, 0),
+              predicted = rf_hanes_model_prob[,"Yes"])
+class_model_performance[3] <- rf_auc
+names(class_model_performance) <- c("rpart_auc",
+                                    "boot_auc",
+                                    "rf_auc")
+class_model_performance
+```
+
+# Tune Random Forest model.
+The results of this are an AUC == 1.  This leads me to believe that the tuning parameters in the following are not bing applied correctly.  I tried various methods to revise this section, but ran out of time.
+```{r}
+res <- tuneRF(x = subset(nhanes_test, select = -DIQ010),
+              y = nhanes_test$DIQ010,
+              ntreeTry = 500,
+              doBest = TRUE)
+print(res)
+rfTune_hanes_model_prob <- predict(object = res,
+                                   newdata = nhanes_test,
+                                   type = "prob")
+rfTune_auc <- auc(actual = ifelse(nhanes_test$DIQ010 == "Yes", 1, 0),
+              predicted = rfTune_hanes_model_prob[,"Yes"])
+class_model_performance[4] <- rfTune_auc
+names(class_model_performance) <- c("rpart_auc",
+                                    "boot_auc",
+                                    "rf_auc",
+                                    "rfTune_auc")
+class_model_performance
+```
+
+# GBM model.
+For using the AUC to evaluate model performance, I receive the ranges; -Inf to Inf and 0 to 0.  In calucualting AUC, this returns NaN.  I tried problem solving here, but ran out of time.  Would appreciate feedback here.
+```{r}
+nhanes_train$DIQ010 <- ifelse(nhanes_train$DIQ010 == "yes", 1, 0)
+set.seed(43)
+gbm_nhanes_model <- gbm(formula = nhanes_fm, 
+                        distribution = "bernoulli",
+                        data = nhanes_train,
+                        n.trees = 10000)
+gbm_nhanes_model
+nhanes_test$DIQ010 <- ifelse(nhanes_test$DIQ010 == "yes", 1, 0)
+gbm_pred1 <- predict(object = gbm_nhanes_model,
+                     newdata = nhanes_test,
+                     n.trees = 10000)
+gbm_pred2 <- predict(object = gbm_nhanes_model,
+                     newdata = nhanes_test,
+                     n.trees = 10000,
+                     type = "response")
+range(gbm_pred1)
+range(gbm_pred2)
+auc(actual = nhanes_test$DIQ010, predicted = gbm_pred1)
+auc(actual = nhanes_test$DIQ010, predicted = gbm_pred2)
+```
+
+# Conclusion
+From using AUC to evaluate the tree-model performance, the Random Forest model provides the highest AUC and shoul be selected to accurately predict the diagnoses of diabetes on the observation.  However, since this is a prediction being used to aid in diagnosis, from evluating the confusion matrixes between the Random Forest and Bootsrapped model, the reduction in False Positives in the Bootstrapped model should be taken into consideration, to reduce the chance of mis diagnosis, even though the AUC is less than the Random Forest model.
